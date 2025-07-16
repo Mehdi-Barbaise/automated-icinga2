@@ -10,6 +10,7 @@ For example:
 Feel free to adapt it as you want.
 
 Usage:
+
 $ ./icinga_install.sh
 
 $ ./icinga_uninst.sh
