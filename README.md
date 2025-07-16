@@ -10,6 +10,6 @@ For example:
 Feel free to adapt it as you want.
 
 Usage:
-$ ./icinga_install.sh
+$ sudo ./icinga_install.sh
 
-$ ./icinga_uninst.sh
+$ sudo ./icinga_uninst.sh
