@@ -8,3 +8,8 @@ For example:
 - Script is made for debian12, if you use another distro, it might not work properply.
 
 Feel free to adapt it as you want.
+
+Usage:
+$ ./icinga_install.sh
+
+$ ./icinga_uninst.sh
