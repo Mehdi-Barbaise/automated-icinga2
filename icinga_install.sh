@@ -1,22 +1,22 @@
 #!/bin/bash
 PATH='/bin:/usr/bin'
 
-# Script d'installation d'icinga 2. Cela inclus également l'ajout des dépôts nécessaires 
+# Icinga 2 automated installation script.
 
 echo """
 /!\ WARNING: the installation is a test, for personal use, and doesn't implement all security configurations. It may also not fit your system/infrastructure. /!\ 
-Must be used by root, and disitribution must be Debian 12 Bookworm.
+Must be used by root, and distribution must be Debian 12 Bookworm.
 """
 
-# Vérifier que le script est bien exécuté en mode root
+# Verify that the script is executed as root
 if [ "$(id -u)" != "0" ]; then
-   echo "Ce script doit être exécuté en tant que root" 1>&2
+   echo "This script must be executed as root." 1>&2
    exit 1
 fi
 
-# Vérifier que la distribution est bien Debian 12 Bookworm
+# Verify that distribution is Debian 12 Bookworm. Suppress the follwing "if" bloc to use this script with other distros. 
 if [ ! -f /etc/debian_version ] || ! grep -q '^12' /etc/debian_version; then
-   echo "Ce script est conçu pour Debian 12 Bookworm" 1>&2
+   echo "Distribution must be Debian 12 Bookworm" 1>&2
    exit 1
 fi
 
@@ -67,43 +67,46 @@ DIST=$(awk -F"[)(]+" '/VERSION=/ {print $2}' /etc/os-release); \
 
 apt update
 
-# Installation de tous les paquets nécessaires pour la suite
+# Installing necessary packages
 apt install -y icinga2 monitoring-plugins icingadb icingadb-redis apache2 mariadb-server php php-cli libapache2-mod-php php-{curl,gd,intl,memcache,xml,zip,mbstring,json,mysql} icingadb-web icingaweb2 icingacli
 
-# Installation de l'API
+# Installing API
 icinga2 api setup
 systemctl restart icinga2
 
-# SETUP ICINGADB
 
-#Setup Redis Server
+## ICINGADB SETUP
+
+# Redis Server Setup
 systemctl enable --now icingadb-redis.service
 systemctl restart icingadb-redis
 
-# Modifications nécessaires dans le fichier de configuration
-# Définir la ligne à modifier /!\ VERIFIER LE NUMERO DE LIGNE, EN CAS DE MàJ de ICINGADB-REDIS DEPUIS LA CONFECTION DU SCRIPT /!\
+# Necessary modifications in the configuration file
+
+# Define line to modify /!\ VERIFY THE NUMBER OF LINE, IN CASE IT CHANGED DUE AFTER SOME UPDATES!! /!\
 line_to_modify="111"
 line_to_modify2="87"
 
-# Définir le nouveau contenu de la ligne
+# Defining content of new line
 new_content="protected-mode no"
 new_content2="bind 0.0.0.0"
 
-# Modifier la ligne spécifiée dans le fichier
+# Modifying specified line in the file
 sed -i "${line_to_modify}s/.*/$new_content/" /etc/icingadb-redis/icingadb-redis.conf
 sed -i "${line_to_modify2}s/.*/$new_content2/" /etc/icingadb-redis/icingadb-redis.conf
 
 systemctl restart icingadb-redis
 
-# Activer le service icingadb et redémarrer icinga2
+# Activating icingadb and restarting icinga2
 icinga2 feature enable icingadb
 systemctl restart icinga2
 
 systemctl enable apache2
 
-# SETUP WEB SERVER
 
-# Remplacement de la page par défaut par "site en maintenance"
+## SETUP WEB SERVER
+
+# Replacing default installation Web page by a maintenance page
 
 echo """<!DOCTYPE html>
 <html lang="en">
@@ -133,9 +136,11 @@ echo """<!DOCTYPE html>
 </html>
 """ > /var/www/html/index.html
 
+# If you don't need no web page, just delete /var/www/html/index.html, or replace the previous "echo" bloc by "rm /var/www/html/index.html"
+
 systemctl reload apache2
 
-# Installer les bases de données (mariadb)
+# Installing databases (mariadb)
 
 mysql_secure_installation
 
@@ -248,30 +253,30 @@ done
 
 escaped_admin_pswd=$(printf '%q' "$admin_pswd")
 
-# Création d'un compte admin pour la database (utile si on désactive la possibilité d'utiliser root en remote)
+# Creating an admin account for the database (because root account should never be able to connect to it remotely)
 echo "CREATE USER '${escaped_admin_username}'@'localhost' IDENTIFIED BY '${escaped_admin_pswd}'; GRANT ALL PRIVILEGES ON *.* TO '${escaped_admin_username}'@'localhost' WITH GRANT OPTION; FLUSH PRIVILEGES;" | mysql -u root -p
 systemctl enable mariadb
 
-# Création d'une db "icingadb" et d'un compte admin "icingadb"
+# Creating an "icingadb" database and an admin account for it
 echo "CREATE DATABASE icingadb; CREATE USER '${escaped_icingadb_username}'@'localhost' IDENTIFIED BY '${escaped_icingadb_pswd}'; GRANT ALL ON icingadb.* TO '${escaped_icingadb_username}'@'localhost';" | mysql -u root -p
 
-# Importation du schéma dans la base de données icingadb
+# Importing schema in icingadb database
 if mysql -u root -p icingadb < /usr/share/icingadb/schema/mysql/schema.sql; then
-    echo "Le schéma a été importé avec succès dans la base de données icingadb."
+    echo "Schema was successfully imported in icingadb's database."
 else
-    echo "Erreur lors de l'importation du schéma dans la base de données icingadb."
+    echo "Error during the importation of schema in icingadb's database."
     exit 1
 fi
 
-# /!\ Configuration personnalisée de Redis non implémentée (/etc/icingadb/config.yml) !!!
+# /!\ Personalized Redis Configuration not implemented yet (/etc/icingadb/config.yml) !!!
 
 systemctl enable --now icingadb
 
-# Installer icinga web 2
-echo "Configuration d'icinga web 2..."
+# Installing icinga web 2
+echo "Configuring icinga web 2..."
 icingacli setup config webserver apache --document-root /usr/share/icingaweb2/public
 
-echo "Création du token..."
+echo "Creating the token..."
 icingacli setup token create
 
 echo "To check your token, use the following command:"
@@ -281,15 +286,15 @@ echo "CREATE DATABASE icingaweb2; CREATE USER '${escaped_icingaweb2_username}'@'
 
 # Modifications du username et password dans /etc/icingadb/config.yml
 
-# Lignes à modifier
+# Lines to modify
 line_to_modify3="21"
 line_to_modify4="24"
 
-# Définir le nouveau contenu de la ligne
+# Lines new content
 new_content3="  user: ${icingadb_username}"
 new_content4="  password: ${icingadb_pswd}"
 
-# Modifier la ligne spécifiée dans le fichier
+# Modifying sepcified lines 
 sed -i "${line_to_modify3}s/.*/$new_content3/" /etc/icingadb/config.yml
 sed -i "${line_to_modify4}s/.*/$new_content4/" /etc/icingadb/config.yml
 
