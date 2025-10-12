@@ -16,3 +16,6 @@ $ ./icinga_install.sh
 $ ./icinga_uninst.sh
 
 Launch it as root (or with sudo).
+
+
+A new version is coming soon, as icinga2 evolved: After this installation, and before the web setup part, we need a user for Redis and another one for Icinga API (which were not required before).
