@@ -2,20 +2,16 @@
 
 I was tired of installing everything manually for my labs, so I automated the installation and the uninstallation of Icinga2.
 
-/!\ Warning: This script is for personnal use, it might not suits your needs.
-For example: 
-- I didn't delete the default web page, but replaced it by a maintenance page.
-- Script is made for debian12, if you use another distro, it might not work properply.
+/!\ Warning: This script was made for personal use, it might not suits your needs. It only automates the basic installation based on the official documentation, if you want further security settings and configuration, for example, you'll have to configure them yourself.
+
+Tested on Debian 12 and 13. Should work on any Debian based Linux Distro using "apt" as a package manager.
 
 Feel free to adapt it as you want.
 
 Usage:
 
 $ ./icinga_install.sh
-
+Or, to uninstall and purge everything related to icinga (including databases):
 $ ./icinga_uninst.sh
 
-Launch it as root (or with sudo).
-
-
-A new version is coming soon, as icinga2 evolved: After this installation, and before the web setup part, we need a user for Redis and another one for Icinga API (which were not required before).
+To be Launched as root (or with sudo).
