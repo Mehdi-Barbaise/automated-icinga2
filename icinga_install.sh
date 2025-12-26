@@ -1,22 +1,21 @@
 #!/bin/bash
 PATH='/bin:/usr/bin'
 
+# TO DO: 
+# - ADDING A USER FOR REDIS
+# - ADDING A USER FOR ICINGA API
+# ==> Both required in the web setup now!!!
+
 # Icinga 2 automated installation script.
 
 echo """
 /!\ WARNING: the installation is a test, for personal use, and doesn't implement all security configurations. It may also not fit your system/infrastructure. /!\ 
-Must be used by root, and distribution must be Debian 12 Bookworm.
+Must be used by root, and distribution must be Debian 12 Bookworm. If you're using it on another distro, it might not install properly, and won't work if it doesn't use apt for package managing.
 """
 
 # Verify that the script is executed as root
 if [ "$(id -u)" != "0" ]; then
    echo "This script must be executed as root." 1>&2
-   exit 1
-fi
-
-# Verify that distribution is Debian 12 Bookworm. Suppress the follwing "if" bloc to use this script with other distros. 
-if [ ! -f /etc/debian_version ] || ! grep -q '^12' /etc/debian_version; then
-   echo "Distribution must be Debian 12 Bookworm" 1>&2
    exit 1
 fi
 
@@ -71,13 +70,13 @@ apt update
 apt install -y icinga2 monitoring-plugins icingadb icingadb-redis apache2 mariadb-server php php-cli libapache2-mod-php php-{curl,gd,intl,memcache,xml,zip,mbstring,json,mysql} icingadb-web icingaweb2 icingacli
 
 # Installing API
-icinga2 api setup
+/usr/sbin/icinga2 api setup
 systemctl restart icinga2
 
 
 ## ICINGADB SETUP
 
-# Redis Server Setup
+# Redis Server setup
 systemctl enable --now icingadb-redis.service
 systemctl restart icingadb-redis
 
@@ -104,9 +103,9 @@ systemctl restart icinga2
 systemctl enable apache2
 
 
-## SETUP WEB SERVER
+## WEB SERVER SETUP
 
-# Replacing default installation Web page by a maintenance page
+# Replacing default installation Web page by a maintenance page 
 
 echo """<!DOCTYPE html>
 <html lang="en">
@@ -136,7 +135,9 @@ echo """<!DOCTYPE html>
 </html>
 """ > /var/www/html/index.html
 
-# If you don't need no web page, just delete /var/www/html/index.html, or replace the previous "echo" bloc by "rm /var/www/html/index.html"
+echo " "
+echo "If you don't need no web page, just delete /var/www/html/index.html, or replace the previous \"echo\" bloc by \"rm /var/www/html/index.html"
+echo " "
 
 systemctl reload apache2
 
@@ -152,7 +153,7 @@ validate_1=0
 
 while [[ $validate_1 -eq 0 ]]
 do
-    printf "Please choose a username: (To avoid issues, avoid these characters: [\", ', \\])\n"
+    printf "Please choose a username:\n"
     read -r icingadb_username
     echo "Username = ${icingadb_username}. Are you OK with it? (Y/N)"
     read -r yes_no_1
@@ -165,7 +166,7 @@ done
 escaped_icingadb_username=$(printf '%q' "$icingadb_username")
 
 while true; do
-    printf "Please choose a password: (To avoid issues, avoid these characters: [\", ', \\])\n"
+    printf "Please choose a password:\n"
     read -rs icingadb_pswd
     echo "Please type your password again: "
     read -rs icingadb_pswd_2
@@ -189,7 +190,7 @@ validate_2=0
 
 while [[ $validate_2 -eq 0 ]]
 do
-    printf "Please choose a username: (To avoid issues, avoid these characters: [\", ', \\])\n"
+    printf "Please choose a username:\n"
     read -r icingaweb2_username
     echo "Username = ${icingaweb2_username}. Are you OK with it? (Y/N)"
     read -r yes_no_2
@@ -202,7 +203,7 @@ done
 escaped_icingaweb2_username=$(printf '%q' "$icingaweb2_username")
 
 while true; do
-    printf "Please choose a password: (To avoid issues, avoid these characters: [\", ', \\])\n"
+    printf "Please choose a password:\n"
     read -rs icingaweb2_pswd
     echo "Please type your password again: "
     read -rs icingaweb2_pswd_2
@@ -225,7 +226,7 @@ validate_3=0
 while [[ $validate_3 -eq 0 ]]
 do
     echo " "
-    printf "Please choose an admin username: (To avoid issues, avoid these characters: [\", ', \\])\n"
+    printf "Please choose an admin username:\n"
     read -r admin_username
     echo "Admin = ${admin_username}. Are you OK with it? (Y/N)"
     read -r yes_no_3
@@ -238,7 +239,7 @@ done
 escaped_admin_username=$(printf '%q' "$admin_username")
 
 while true; do
-    printf "Please choose a password: (To avoid issues, avoid these characters: [\", ', \\])\n"
+    printf "Please choose a password:\n"
     read -rs admin_pswd
     echo "Please type your password again: "
     read -rs admin_pswd_2
@@ -250,6 +251,10 @@ while true; do
         echo "Passwords do not match. Please try again."
     fi
 done
+
+echo " "
+echo "For the rest of the installation, the requested passwords will be the admin password (the last one you just set)"
+echo " "
 
 escaped_admin_pswd=$(printf '%q' "$admin_pswd")
 
@@ -284,17 +289,17 @@ echo "icingacli setup token show"
 
 echo "CREATE DATABASE icingaweb2; CREATE USER '${escaped_icingaweb2_username}'@'localhost' IDENTIFIED BY '${escaped_icingaweb2_pswd}'; GRANT ALL ON icingaweb2.* TO '${escaped_icingaweb2_username}'@'localhost';" | mysql -u root -p
 
-# Modifications du username et password dans /etc/icingadb/config.yml
+# Username and password modification in /etc/icingadb/config.yml
 
 # Lines to modify
 line_to_modify3="21"
 line_to_modify4="24"
 
-# Lines new content
+# Define new content of line
 new_content3="  user: ${icingadb_username}"
 new_content4="  password: ${icingadb_pswd}"
 
-# Modifying sepcified lines 
+# Modify specified lines
 sed -i "${line_to_modify3}s/.*/$new_content3/" /etc/icingadb/config.yml
 sed -i "${line_to_modify4}s/.*/$new_content4/" /etc/icingadb/config.yml
 
@@ -306,13 +311,18 @@ Installation finished. To finish configuring your icingaweb server, please conti
 
 echo """ Guide to icingaweb2 setup
 
+Installation finished. To finish configuring your icingaweb server, please continue in a browser.
+(Visit '<this hostname/IP address>/icingaweb2/setup')
+
 1st database to provide = icingaweb2
 
 2nd database to provide = icingadb
 
 For the redis-server name, you can just provide the IP address of the server.
 
-Iicinga2 API username and password can be found in /etc/icinga2/conf.d/api-users.conf
+Iicinga2 API username and password can be found in /etc/icinga2/conf.d/api-users.conf. Default username is 'root', without password.
 
 If you want to use the PDF export Module, you'll need to install the PHP module Imagick on this server. 
 """ > setup_help.txt
+
+echo "Find help about the web installation in: setup_help.txt"
