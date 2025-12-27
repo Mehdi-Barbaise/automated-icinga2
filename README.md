@@ -1,4 +1,5 @@
 # automated-icinga2
+-- Author: G3ngh1s
 
 I was tired of installing everything manually for my labs, so I automated the installation and the uninstallation of Icinga2.
 
